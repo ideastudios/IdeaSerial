@@ -31,8 +31,6 @@ public class AppSettings {
             config.usbPortIndex = i;
             ports[i] = config;
         }
-        // 预置两条示例命令
-        commands.add(new QuickCommand("AT", "AT", false, true));
-        commands.add(new QuickCommand("复位", "FF 00 01", true, false));
+        // 预置示例命令由 SettingsStore 按应用语言创建（见 createDefault）
     }
 }

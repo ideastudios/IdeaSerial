@@ -324,7 +324,7 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
             if (closed) {
                 runOnUiThread(() -> {
                     Toast.makeText(ComAssistantActivity.this,
-                            "USB 串口设备已拔出", Toast.LENGTH_SHORT).show();
+                            getString(R.string.usb_detached), Toast.LENGTH_SHORT).show();
                     PortFragment fragment = currentFragment();
                     if (fragment != null) {
                         fragment.refreshPortState();
@@ -399,11 +399,11 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
             data = bos.toByteArray();
         } catch (IOException e) {
             e.printStackTrace();
-            Toast.makeText(this, "读取文件失败", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.file_read_failed), Toast.LENGTH_SHORT).show();
             return;
         }
         if (data.length == 0) {
-            Toast.makeText(this, "文件为空", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.file_empty), Toast.LENGTH_SHORT).show();
             return;
         }
         showFileSendDialog(data);
@@ -416,19 +416,19 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
         box.setPadding(pad, pad / 2, pad, 0);
         final EditText etChunk = new EditText(this);
         etChunk.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        etChunk.setHint("每包字节数");
+        etChunk.setHint(getString(R.string.file_chunk_hint));
         etChunk.setText(String.valueOf(settings.fileSendChunkSize));
         final EditText etInterval = new EditText(this);
         etInterval.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        etInterval.setHint("包间隔 (ms)");
+        etInterval.setHint(getString(R.string.file_interval_hint));
         etInterval.setText(String.valueOf(settings.fileSendIntervalMs));
         box.addView(etChunk);
         box.addView(etInterval);
 
         new MaterialAlertDialogBuilder(this)
-                .setTitle("发送文件（" + data.length + " 字节）")
+                .setTitle(getString(R.string.file_send_title, data.length))
                 .setView(box)
-                .setPositiveButton("开始发送", (dialog, which) -> {
+                .setPositiveButton(getString(R.string.file_send_start), (dialog, which) -> {
                     int chunk = settings.fileSendChunkSize;
                     int interval = settings.fileSendIntervalMs;
                     try {
@@ -446,7 +446,7 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
                     saveSettings();
                     startFileSend(data, chunk, interval);
                 })
-                .setNegativeButton("取消", null)
+                .setNegativeButton(getString(R.string.dialog_cancel), null)
                 .show();
     }
 
@@ -459,10 +459,11 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
         final PortFragment fragment = currentFragment();
         fileSendCancelled = false;
         androidx.appcompat.app.AlertDialog progress = new MaterialAlertDialogBuilder(this)
-                .setTitle("发送文件")
-                .setMessage("0 / " + data.length)
+                .setTitle(getString(R.string.menu_send_file))
+                .setMessage(getString(R.string.progress_format, 0, data.length))
                 .setCancelable(false)
-                .setNegativeButton("取消", (dialog, which) -> fileSendCancelled = true)
+                .setNegativeButton(getString(R.string.dialog_cancel),
+                        (dialog, which) -> fileSendCancelled = true)
                 .create();
         progress.show();
         new Thread(() -> {
@@ -476,7 +477,8 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
                         Thread.sleep(interval);
                     }
                     int finalSent = sent;
-                    runOnUiThread(() -> progress.setMessage(finalSent + " / " + data.length));
+                    runOnUiThread(() -> progress.setMessage(
+                            getString(R.string.progress_format, finalSent, data.length)));
                 }
             } catch (InterruptedException e) {
                 fileSendCancelled = true;
@@ -499,7 +501,8 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
                     }
                     fragment.logTx(summary);
                 }
-                Toast.makeText(this, fileSendCancelled ? "发送已取消" : "发送完成",
+                Toast.makeText(this,
+                        getString(fileSendCancelled ? R.string.send_cancelled : R.string.send_done),
                         Toast.LENGTH_SHORT).show();
             });
         }, "file-send").start();
@@ -515,7 +518,7 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
         }
         String text = fragment.exportLogText();
         if (text.isEmpty()) {
-            Toast.makeText(this, "日志为空", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.log_empty), Toast.LENGTH_SHORT).show();
             return;
         }
         pendingLogText = text;
@@ -533,10 +536,10 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
             }
             out.write(pendingLogText != null ? pendingLogText.getBytes() : new byte[0]);
             out.close();
-            Toast.makeText(this, "保存成功", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.save_ok), Toast.LENGTH_SHORT).show();
         } catch (IOException e) {
             e.printStackTrace();
-            Toast.makeText(this, "保存失败", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.save_failed), Toast.LENGTH_SHORT).show();
         }
         pendingLogText = null;
     }

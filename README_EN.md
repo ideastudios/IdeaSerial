@@ -28,6 +28,7 @@
 | 💾 Log export | Save current page log to txt |
 | ⚡ High-baudrate ready | Blocking reads + batched UI refresh, no frame loss at 921600+ |
 | 🌓 Dark mode | Material 3 DayNight, Android 13+ themed (monochrome) icon |
+| 🌐 Bilingual | Follows system language (中文/English); per-app language selectable in system settings on Android 13+ |
 
 ## 📥 Download
 
@@ -35,7 +36,9 @@ Grab `IdeaSerial-vX.Y.Z.apk` (with SHA256) from [Releases](https://github.com/id
 
 ## 🖼 Screenshots
 
-> Device screenshots coming soon (PRs welcome).
+<p align="center">
+  <img src="docs/images/ui-main.png" width="320" alt="IdeaSerial main screen"/>
+</p>
 
 ## 🛠 Building from source
 

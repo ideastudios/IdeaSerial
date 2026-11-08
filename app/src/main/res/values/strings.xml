@@ -1,16 +1,88 @@
 <resources>
     <string name="app_name">灵思串口</string>
+
+    <!-- 主界面 -->
     <string name="open_port">打开串口</string>
     <string name="close_port">关闭串口</string>
     <string name="port_settings">设置</string>
     <string name="send">发送</string>
     <string name="auto_send">自动</string>
     <string name="send_hint">发送内容</string>
-    <string name="menu_send_file">发送文件</string>
-    <string name="menu_save_log">保存日志</string>
-    <string name="menu_clear_log">清空日志</string>
     <string name="port_not_open">串口未打开</string>
     <string name="need_close_first">请先关闭串口再修改配置</string>
     <string name="open_ok">串口已打开</string>
     <string name="open_fail">打开串口失败</string>
+    <string name="menu_send_file">发送文件</string>
+    <string name="menu_save_log">保存日志</string>
+    <string name="menu_clear_log">清空日志</string>
+
+    <!-- 串口设置对话框 -->
+    <string name="dialog_port_settings">串口设置</string>
+    <string name="driver_native">板载串口</string>
+    <string name="driver_usb">USB 串口</string>
+    <string name="device_label">设备</string>
+    <string name="baud_rate">波特率</string>
+    <string name="data_bits">数据位</string>
+    <string name="parity">校验位</string>
+    <string name="stop_bits">停止位</string>
+    <string name="flow_control">流控</string>
+    <string name="manual_path_hint">或手动输入路径，如 /dev/ttyS1</string>
+    <string name="usb_none">未检测到 USB 串口设备</string>
+    <string name="dialog_ok">确定</string>
+    <string name="dialog_cancel">取消</string>
+    <string name="dialog_save">保存</string>
+    <string name="dialog_delete">删除</string>
+    <string name="config_saved">配置已保存，下次打开串口时生效</string>
+
+    <!-- 串口打开/权限 -->
+    <string name="usb_no_match">未检测到匹配的 USB 串口设备，请检查连接后重新配置</string>
+    <string name="usb_permission_denied">未授予 USB 权限，无法打开串口</string>
+    <string name="usb_detached">USB 串口设备已拔出</string>
+    <string name="err_no_rw_permission">没有串口读/写权限。板载串口（/dev/ttyS*）通常需要 root 权限：请确认设备已 root，并在 superuser 授权弹窗中允许本应用；如无需 root，请改用 USB 串口模式。</string>
+    <string name="err_unknown">未知错误</string>
+
+    <!-- 快捷命令 -->
+    <string name="cmd_add">新增命令</string>
+    <string name="cmd_edit">编辑命令</string>
+    <string name="cmd_name_hint">名称</string>
+    <string name="cmd_content_hint">内容（Hex 模式支持空格分隔）</string>
+    <string name="cmd_hex_label">Hex 模式发送</string>
+    <string name="cmd_newline_label">自动追加换行 (CRLF)</string>
+    <string name="chip_add">＋ 新增</string>
+    <string name="preset_reset">复位</string>
+
+    <!-- 日志 -->
+    <string name="log_entry">日志条目</string>
+    <string name="copy">复制</string>
+    <string name="share">分享</string>
+    <string name="copied">已复制</string>
+    <string name="share_log">分享日志</string>
+    <string name="log_empty">日志为空</string>
+
+    <!-- 发送文件 -->
+    <string name="file_read_failed">读取文件失败</string>
+    <string name="file_empty">文件为空</string>
+    <string name="file_send_title">发送文件（%1$d 字节）</string>
+    <string name="file_chunk_hint">每包字节数</string>
+    <string name="file_interval_hint">包间隔 (ms)</string>
+    <string name="file_send_start">开始发送</string>
+    <string name="progress_format">%1$d / %2$d</string>
+    <string name="send_cancelled">发送已取消</string>
+    <string name="send_done">发送完成</string>
+    <string name="save_ok">保存成功</string>
+    <string name="save_failed">保存失败</string>
+
+    <!-- 选项数组 -->
+    <string-array name="parity_options">
+        <item>无</item>
+        <item>奇校验</item>
+        <item>偶校验</item>
+        <item>标校验</item>
+        <item>空校验</item>
+    </string-array>
+    <string-array name="flow_options">
+        <item>无</item>
+        <item>RTS/CTS</item>
+        <item>XON/XOFF</item>
+    </string-array>
 </resources>

@@ -1,4 +1,88 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">IdeaSerial</string>
+
+    <!-- Main screen -->
+    <string name="open_port">Open Port</string>
+    <string name="close_port">Close Port</string>
+    <string name="port_settings">Settings</string>
+    <string name="send">Send</string>
+    <string name="auto_send">Auto</string>
+    <string name="send_hint">Message to send</string>
+    <string name="port_not_open">Port not open</string>
+    <string name="need_close_first">Close the port before changing settings</string>
+    <string name="open_ok">Port opened</string>
+    <string name="open_fail">Failed to open port</string>
+    <string name="menu_send_file">Send File</string>
+    <string name="menu_save_log">Save Log</string>
+    <string name="menu_clear_log">Clear Log</string>
+
+    <!-- Port settings dialog -->
+    <string name="dialog_port_settings">Serial Port Settings</string>
+    <string name="driver_native">On-board serial</string>
+    <string name="driver_usb">USB serial</string>
+    <string name="device_label">Device</string>
+    <string name="baud_rate">Baud rate</string>
+    <string name="data_bits">Data bits</string>
+    <string name="parity">Parity</string>
+    <string name="stop_bits">Stop bits</string>
+    <string name="flow_control">Flow control</string>
+    <string name="manual_path_hint">Or enter a path manually, e.g. /dev/ttyS1</string>
+    <string name="usb_none">No USB serial device detected</string>
+    <string name="dialog_ok">OK</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_save">Save</string>
+    <string name="dialog_delete">Delete</string>
+    <string name="config_saved">Settings saved; they take effect next time the port is opened</string>
+
+    <!-- Open port / permissions -->
+    <string name="usb_no_match">No matching USB serial device found. Check the connection and configure again</string>
+    <string name="usb_permission_denied">USB permission denied; cannot open the port</string>
+    <string name="usb_detached">USB serial device disconnected</string>
+    <string name="err_no_rw_permission">No read/write permission for the serial port. On-board ports (/dev/ttyS*) usually require root: make sure the device is rooted and grant superuser access to this app; otherwise use USB serial mode.</string>
+    <string name="err_unknown">Unknown error</string>
+
+    <!-- Quick commands -->
+    <string name="cmd_add">New Command</string>
+    <string name="cmd_edit">Edit Command</string>
+    <string name="cmd_name_hint">Name</string>
+    <string name="cmd_content_hint">Content (spaces allowed in Hex mode)</string>
+    <string name="cmd_hex_label">Send in Hex mode</string>
+    <string name="cmd_newline_label">Append newline (CRLF)</string>
+    <string name="chip_add">＋ New</string>
+    <string name="preset_reset">Reset</string>
+
+    <!-- Log -->
+    <string name="log_entry">Log entry</string>
+    <string name="copy">Copy</string>
+    <string name="share">Share</string>
+    <string name="copied">Copied</string>
+    <string name="share_log">Share log</string>
+    <string name="log_empty">Log is empty</string>
+
+    <!-- Send file -->
+    <string name="file_read_failed">Failed to read file</string>
+    <string name="file_empty">File is empty</string>
+    <string name="file_send_title">Send file (%1$d bytes)</string>
+    <string name="file_chunk_hint">Bytes per chunk</string>
+    <string name="file_interval_hint">Interval (ms)</string>
+    <string name="file_send_start">Start sending</string>
+    <string name="progress_format">%1$d / %2$d</string>
+    <string name="send_cancelled">Sending cancelled</string>
+    <string name="send_done">Send complete</string>
+    <string name="save_ok">Saved</string>
+    <string name="save_failed">Failed to save</string>
+
+    <!-- Option arrays -->
+    <string-array name="parity_options">
+        <item>None</item>
+        <item>Odd</item>
+        <item>Even</item>
+        <item>Mark</item>
+        <item>Space</item>
+    </string-array>
+    <string-array name="flow_options">
+        <item>None</item>
+        <item>RTS/CTS</item>
+        <item>XON/XOFF</item>
+    </string-array>
 </resources>

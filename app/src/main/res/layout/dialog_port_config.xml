@@ -20,20 +20,20 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checked="true"
-                android:text="板载串口" />
+                android:text="@string/driver_native" />
 
             <RadioButton
                 android:id="@+id/radioUsb"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:text="USB 串口" />
+                android:text="@string/driver_usb" />
         </RadioGroup>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="设备" />
+            android:text="@string/device_label" />
 
         <Spinner
             android:id="@+id/spinnerDevice"
@@ -44,7 +44,7 @@
             android:id="@+id/editTextManualPath"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="或手动输入路径，如 /dev/ttyS1"
+            android:hint="@string/manual_path_hint"
             android:inputType="text"
             android:singleLine="true" />
 
@@ -52,7 +52,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="波特率" />
+            android:text="@string/baud_rate" />
 
         <Spinner
             android:id="@+id/spinnerBaud"
@@ -74,7 +74,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="数据位" />
+                    android:text="@string/data_bits" />
 
                 <Spinner
                     android:id="@+id/spinnerDataBits"
@@ -92,7 +92,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="校验位" />
+                    android:text="@string/parity" />
 
                 <Spinner
                     android:id="@+id/spinnerParity"
@@ -116,7 +116,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="停止位" />
+                    android:text="@string/stop_bits" />
 
                 <Spinner
                     android:id="@+id/spinnerStopBits"
@@ -134,7 +134,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="流控" />
+                    android:text="@string/flow_control" />
 
                 <Spinner
                     android:id="@+id/spinnerFlow"

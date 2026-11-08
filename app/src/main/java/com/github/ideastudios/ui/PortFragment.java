@@ -293,7 +293,7 @@ public class PortFragment extends Fragment {
         if (config.driverType == SerialConfig.DRIVER_USB) {
             UsbSerialConnection.UsbPortInfo info = findUsbInfo(config);
             if (info == null) {
-                toast("未检测到匹配的 USB 串口设备，请检查连接后重新配置");
+                toast(getString(R.string.usb_no_match));
                 return;
             }
             if (!info.hasPermission) {
@@ -304,7 +304,7 @@ public class PortFragment extends Fragment {
                     if (granted) {
                         doOpen();
                     } else {
-                        toast("未授予 USB 权限，无法打开串口");
+                        toast(getString(R.string.usb_permission_denied));
                     }
                 });
                 return;
@@ -334,12 +334,11 @@ public class PortFragment extends Fragment {
         } catch (SecurityException e) {
             ((ComAssistantActivity) requireActivity()).showPortError(
                     getString(R.string.open_fail),
-                    "没有串口读/写权限。板载串口（/dev/ttyS*）通常需要 root 权限：请确认设备已 root，"
-                            + "并在 superuser 授权弹窗中允许本应用；如无需 root，请改用 USB 串口模式。");
+                    getString(R.string.err_no_rw_permission));
         } catch (IOException e) {
             ((ComAssistantActivity) requireActivity()).showPortError(
                     getString(R.string.open_fail),
-                    e.getMessage() != null ? e.getMessage() : "未知错误");
+                    e.getMessage() != null ? e.getMessage() : getString(R.string.err_unknown));
         }
     }
 
@@ -438,7 +437,7 @@ public class PortFragment extends Fragment {
             binding.chipGroupCommands.addView(chip);
         }
         Chip addChip = new Chip(requireContext());
-        addChip.setText("＋ 新增");
+        addChip.setText(R.string.chip_add);
         addChip.setCloseIconVisible(false);
         addChip.setOnClickListener(v -> showCommandEditor(null));
         binding.chipGroupCommands.addView(addChip);
@@ -452,13 +451,13 @@ public class PortFragment extends Fragment {
         box.setPadding(pad, pad / 2, pad, 0);
 
         final EditText etName = new EditText(ctx);
-        etName.setHint("名称");
+        etName.setHint(getString(R.string.cmd_name_hint));
         final EditText etContent = new EditText(ctx);
-        etContent.setHint("内容（Hex 模式支持空格分隔）");
+        etContent.setHint(getString(R.string.cmd_content_hint));
         final CheckBox cbHex = new CheckBox(ctx);
-        cbHex.setText("Hex 模式发送");
+        cbHex.setText(getString(R.string.cmd_hex_label));
         final CheckBox cbNew = new CheckBox(ctx);
-        cbNew.setText("自动追加换行 (CRLF)");
+        cbNew.setText(getString(R.string.cmd_newline_label));
         box.addView(etName);
         box.addView(etContent);
         box.addView(cbHex);
@@ -472,9 +471,9 @@ public class PortFragment extends Fragment {
         }
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(ctx)
-                .setTitle(existing == null ? "新增命令" : "编辑命令")
+                .setTitle(getString(existing == null ? R.string.cmd_add : R.string.cmd_edit))
                 .setView(box)
-                .setPositiveButton("保存", (dialog, which) -> {
+                .setPositiveButton(getString(R.string.dialog_save), (dialog, which) -> {
                     QuickCommand cmd = existing != null ? existing : new QuickCommand();
                     cmd.name = etName.getText().toString().trim();
                     cmd.content = etContent.getText().toString();
@@ -490,9 +489,9 @@ public class PortFragment extends Fragment {
                     ((ComAssistantActivity) requireActivity()).saveSettings();
                     buildChips();
                 })
-                .setNegativeButton("取消", null);
+                .setNegativeButton(getString(R.string.dialog_cancel), null);
         if (existing != null) {
-            builder.setNeutralButton("删除", (dialog, which) -> {
+            builder.setNeutralButton(getString(R.string.dialog_delete), (dialog, which) -> {
                 settings.commands.remove(existing);
                 ((ComAssistantActivity) requireActivity()).saveSettings();
                 buildChips();
@@ -521,7 +520,7 @@ public class PortFragment extends Fragment {
             usbNames.add(info.displayName);
         }
         if (usbNames.isEmpty()) {
-            usbNames.add("未检测到 USB 串口设备");
+            usbNames.add(getString(R.string.usb_none));
         }
         final ArrayAdapter<String> nativeAdapter =
                 spinnerAdapter(nativePaths.toArray(new String[0]));
@@ -564,17 +563,19 @@ public class PortFragment extends Fragment {
         // 参数
         d.spinnerDataBits.setAdapter(spinnerAdapter(new String[]{"5", "6", "7", "8"}));
         d.spinnerDataBits.setSelection(Math.max(0, Math.min(3, config.dataBits - 5)));
-        d.spinnerParity.setAdapter(spinnerAdapter(new String[]{"无", "奇校验", "偶校验", "标校验", "空校验"}));
+        d.spinnerParity.setAdapter(
+                spinnerAdapter(getResources().getStringArray(R.array.parity_options)));
         d.spinnerParity.setSelection(Math.max(0, Math.min(4, config.parity)));
         d.spinnerStopBits.setAdapter(spinnerAdapter(new String[]{"1", "2"}));
         d.spinnerStopBits.setSelection(config.stopBits == 2 ? 1 : 0);
-        d.spinnerFlow.setAdapter(spinnerAdapter(new String[]{"无", "RTS/CTS", "XON/XOFF"}));
+        d.spinnerFlow.setAdapter(
+                spinnerAdapter(getResources().getStringArray(R.array.flow_options)));
         d.spinnerFlow.setSelection(Math.max(0, Math.min(2, config.flowControl)));
 
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("串口设置")
+                .setTitle(getString(R.string.dialog_port_settings))
                 .setView(d.getRoot())
-                .setPositiveButton("确定", (dialog, which) -> {
+                .setPositiveButton(getString(R.string.dialog_ok), (dialog, which) -> {
                     boolean wasOpen = helper.isOpen();
                     config.driverType = d.radioUsb.isChecked()
                             ? SerialConfig.DRIVER_USB : SerialConfig.DRIVER_NATIVE;
@@ -610,10 +611,10 @@ public class PortFragment extends Fragment {
                     activity.saveSettings();
                     updatePortInfo();
                     if (wasOpen) {
-                        toast("配置已保存，下次打开串口时生效");
+                        toast(getString(R.string.config_saved));
                     }
                 })
-                .setNegativeButton("取消", null)
+                .setNegativeButton(getString(R.string.dialog_cancel), null)
                 .show();
     }
 
@@ -630,20 +631,21 @@ public class PortFragment extends Fragment {
     private void showEntryMenu(ComBean entry) {
         String text = adapter.entryToText(entry);
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("日志条目")
-                .setItems(new CharSequence[]{"复制", "分享"}, (dialog, which) -> {
-                    if (which == 0) {
-                        ClipboardManager cm = (ClipboardManager)
-                                requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
-                        cm.setPrimaryClip(ClipData.newPlainText("serial", text));
-                        toast("已复制");
-                    } else {
-                        Intent send = new Intent(Intent.ACTION_SEND);
-                        send.setType("text/plain");
-                        send.putExtra(Intent.EXTRA_TEXT, text);
-                        startActivity(Intent.createChooser(send, "分享日志"));
-                    }
-                })
+                .setTitle(getString(R.string.log_entry))
+                .setItems(new CharSequence[]{getString(R.string.copy), getString(R.string.share)},
+                        (dialog, which) -> {
+                            if (which == 0) {
+                                ClipboardManager cm = (ClipboardManager)
+                                        requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
+                                cm.setPrimaryClip(ClipData.newPlainText("serial", text));
+                                toast(getString(R.string.copied));
+                            } else {
+                                Intent send = new Intent(Intent.ACTION_SEND);
+                                send.setType("text/plain");
+                                send.putExtra(Intent.EXTRA_TEXT, text);
+                                startActivity(Intent.createChooser(send, getString(R.string.share_log)));
+                            }
+                        })
                 .show();
     }
 

@@ -24,6 +24,7 @@ public class SettingsSerializationTest {
         AppSettings settings = new AppSettings();
         settings.hexMode = true;
         settings.showTimestamp = false;
+        settings.commands.add(new QuickCommand("AT", "AT", false, true));
         settings.commands.add(new QuickCommand("点亮", "01 02 03", true, false));
         settings.ports[1].driverType = SerialConfig.DRIVER_USB;
         settings.ports[1].usbVid = 0x1A86;
@@ -40,9 +41,9 @@ public class SettingsSerializationTest {
 
         assertTrue(restored.hexMode);
         assertFalse(restored.showTimestamp);
-        assertEquals(3, restored.commands.size());
-        assertEquals("点亮", restored.commands.get(2).name);
-        assertTrue(restored.commands.get(2).isHex);
+        assertEquals(2, restored.commands.size());
+        assertEquals("点亮", restored.commands.get(1).name);
+        assertTrue(restored.commands.get(1).isHex);
         assertEquals(SerialConfig.DRIVER_USB, restored.ports[1].driverType);
         assertEquals(0x1A86, restored.ports[1].usbVid);
         assertEquals(0x7523, restored.ports[1].usbPid);
