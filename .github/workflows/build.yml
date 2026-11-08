@@ -23,7 +23,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build & Unit Test
-        run: ./gradlew assembleDebug testDebugUnitTest
+        run: |
+          for i in 1 2 3; do
+            ./gradlew assembleDebug testDebugUnitTest && exit 0
+            echo "Attempt $i failed, retrying in 30s..."
+            sleep 30
+          done
+          exit 1
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

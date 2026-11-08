@@ -25,7 +25,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug
+        run: |
+          for i in 1 2 3; do
+            ./gradlew assembleDebug && exit 0
+            echo "Attempt $i failed, retrying in 30s..."
+            sleep 30
+          done
+          exit 1
 
       - name: Rename APK & compute SHA256
         run: |
