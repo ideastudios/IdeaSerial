@@ -7,6 +7,15 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- 品牌色（与启动图标渐变一致：深蓝 → 青） -->
+    <color name="brand_primary">#FF0E7490</color>
+    <color name="brand_primary_container">#FFCFFAFE</color>
+    <color name="brand_on_primary_container">#FF083344</color>
+    <color name="brand_secondary">#FF0F766E</color>
+    <color name="brand_secondary_container">#FFCCFBF1</color>
+    <color name="brand_on_secondary_container">#FF042F2E</color>
+
     <!-- TX 方向日志颜色（浅色模式用深色，深色模式见 values-night） -->
     <color name="log_tx">#FF00796B</color>
     <!-- 时间戳辅助色 -->

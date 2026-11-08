@@ -2,6 +2,7 @@ package com.github.ideastudios;
 
 import android.annotation.SuppressLint;
 import android.app.PendingIntent;
+import android.graphics.Color;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -23,6 +24,10 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.github.ideastudios.bean.AppSettings;
 import com.github.ideastudios.bean.ComBean;
@@ -116,6 +121,24 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         setSupportActionBar(binding.toolbar);
+
+        // 沉浸式：内容延伸到状态栏/导航栏下方，由 insets 负责避让
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        final int barTypes = WindowInsetsCompat.Type.systemBars()
+                | WindowInsetsCompat.Type.displayCutout();
+        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, windowInsets) -> {
+            Insets bars = windowInsets.getInsets(barTypes);
+            Insets ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime());
+            v.setPadding(bars.left, 0, bars.right, Math.max(bars.bottom, ime.bottom));
+            return windowInsets;
+        });
+        ViewCompat.setOnApplyWindowInsetsListener(binding.toolbar, (v, windowInsets) -> {
+            Insets bars = windowInsets.getInsets(barTypes);
+            v.setPadding(v.getPaddingLeft(), bars.top, v.getPaddingRight(), v.getPaddingBottom());
+            return windowInsets;
+        });
 
         filePicker = registerForActivityResult(new ActivityResultContracts.GetContent(),
                 uri -> {

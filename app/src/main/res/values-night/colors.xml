@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- 深色模式下的品牌色 -->
+    <color name="brand_primary">#FF03DAC5</color>
+    <color name="brand_primary_container">#FF004E55</color>
+    <color name="brand_on_primary_container">#FF80F5EC</color>
+    <color name="brand_secondary">#FF03DAC5</color>
+    <color name="brand_secondary_container">#FF005048</color>
+    <color name="brand_on_secondary_container">#FFB8F2EA</color>
+
     <!-- 深色模式下的日志颜色 -->
     <color name="log_tx">#FF03DAC5</color>
     <color name="log_time">#FF9E9E9E</color>

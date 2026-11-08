@@ -35,6 +35,7 @@ import com.github.ideastudios.serial.SerialConfig;
 import com.github.ideastudios.serialport.UsbSerialConnection;
 import com.github.ideastudios.util.MyFunc;
 import com.google.android.material.chip.Chip;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.IOException;
@@ -344,6 +345,11 @@ public class PortFragment extends Fragment {
 
     private void updateOpenState(boolean open) {
         binding.buttonOpen.setText(open ? R.string.close_port : R.string.open_port);
+        // 打开时用错误色提示"运行中，点击停止"，关闭时回到品牌主色
+        int color = MaterialColors.getColor(binding.buttonOpen,
+                open ? com.google.android.material.R.attr.colorError
+                        : com.google.android.material.R.attr.colorPrimary);
+        binding.buttonOpen.setTextColor(color);
     }
 
     private void updatePortInfo() {
