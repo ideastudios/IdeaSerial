@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">灵思串口</string>
+    <string name="open_port">打开串口</string>
+    <string name="close_port">关闭串口</string>
+    <string name="port_settings">设置</string>
+    <string name="send">发送</string>
+    <string name="auto_send">自动</string>
+    <string name="send_hint">发送内容</string>
+    <string name="menu_send_file">发送文件</string>
+    <string name="menu_save_log">保存日志</string>
+    <string name="menu_clear_log">清空日志</string>
+    <string name="port_not_open">串口未打开</string>
+    <string name="need_close_first">请先关闭串口再修改配置</string>
+    <string name="open_ok">串口已打开</string>
+    <string name="open_fail">打开串口失败</string>
+</resources>

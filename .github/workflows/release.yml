@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Rename APK & compute SHA256
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          cp app/build/outputs/apk/debug/app-debug.apk "IdeaSerial-${VERSION}.apk"
+          sha256sum "IdeaSerial-${VERSION}.apk" > "IdeaSerial-${VERSION}.apk.sha256"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Update feed branch (latest.json)
+        run: |
+          SHA256=$(cut -d' ' -f1 "IdeaSerial-${VERSION}.apk.sha256")
+          URL="https://github.com/ideastudios/IdeaSerial/releases/download/${VERSION}/IdeaSerial-${VERSION}.apk"
+          cat > latest.json <<EOF
+          {
+            "version": "${VERSION}",
+            "url": "${URL}",
+            "sha256": "${SHA256}"
+          }
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan feed
+          git rm -rf --cached . > /dev/null 2>&1 || true
+          git add latest.json
+          git commit -m "update latest.json for ${VERSION}"
+          git push -f origin feed
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            IdeaSerial-${{ github.ref_name }}.apk
+            IdeaSerial-${{ github.ref_name }}.apk.sha256
+          generate_release_notes: true

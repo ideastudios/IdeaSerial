@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 深色模式下的日志颜色 -->
+    <color name="log_tx">#FF03DAC5</color>
+    <color name="log_time">#FF9E9E9E</color>
+</resources>

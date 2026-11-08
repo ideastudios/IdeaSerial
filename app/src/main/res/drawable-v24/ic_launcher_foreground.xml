@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- TX 方向（青色）：字母 TX + 右向箭头 -->
+    <path
+        android:pathData="M28,38 H40 M34,38 V52"
+        android:strokeColor="#FF03DAC5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="5" />
+    <path
+        android:pathData="M44,38 L54,52 M54,38 L44,52"
+        android:strokeColor="#FF03DAC5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="5" />
+    <path
+        android:pathData="M60,45 H72 M68,40 L73,45 L68,50"
+        android:strokeColor="#FF03DAC5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="5" />
+    <!-- RX 方向（白色）：左向箭头 + 字母 RX -->
+    <path
+        android:pathData="M36,67 H48 M41,62 L36,67 L41,72"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="5" />
+    <path
+        android:pathData="M54,74 V60 H60 A4,4 0 0 1 60,68 H54 M59,68 L65,74"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="5" />
+    <path
+        android:pathData="M69,60 L79,74 M79,60 L69,74"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="5" />
+</vector>
