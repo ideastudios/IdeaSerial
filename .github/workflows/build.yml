@@ -22,6 +22,24 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
 
+      - name: Seed Gradle distribution from mirror (bypasses broken redirects)
+        run: |
+          URL="https://services.gradle.org/distributions/gradle-7.5.1-bin.zip"
+          DIST="gradle-7.5.1-bin"
+          HASH=$(python3 -c '
+          import hashlib, sys
+          n = int.from_bytes(hashlib.md5(sys.argv[1].encode()).digest(), "big")
+          out = ""
+          while n: n, r = divmod(n, 36); out = "0123456789abcdefghijklmnopqrstuvwxyz"[r] + out
+          print(out)
+          ' "$URL")
+          DIR="$HOME/.gradle/wrapper/dists/$DIST/$HASH"
+          mkdir -p "$DIR"
+          curl -fL --retry 5 --retry-delay 10 --connect-timeout 20 \
+            -o "$DIR/$DIST.zip" \
+            "https://mirrors.cloud.tencent.com/gradle/$DIST.zip" || true
+          ls -la "$DIR"
+
       - name: Build & Unit Test
         run: |
           for i in 1 2 3; do
