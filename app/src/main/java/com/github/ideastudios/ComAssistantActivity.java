@@ -23,7 +23,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.viewpager2.widget.ViewPager2;
 
 import com.github.ideastudios.bean.AppSettings;
 import com.github.ideastudios.bean.ComBean;
@@ -132,7 +131,8 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
                 });
 
         binding.viewPager.setAdapter(new PortPagerAdapter(this));
-        binding.viewPager.setOffscreenPageLimit(ViewPager2.OFFSCREEN_PAGE_LIMIT_DEFAULT);
+        // 保留全部页面视图：offscreen 页的 Fragment 才能持续接收数据并累计未读徽标
+        binding.viewPager.setOffscreenPageLimit(PortPagerAdapter.PORT_COUNT - 1);
         new TabLayoutMediator(binding.tabLayout, binding.viewPager,
                 (tab, position) -> {
                     View custom = getLayoutInflater().inflate(R.layout.tab_port,
@@ -151,6 +151,11 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
                 int pos = tab.getPosition();
                 unreadCounts[pos] = 0;
                 updateTabBadge(pos);
+                PortFragment fragment = (PortFragment) getSupportFragmentManager()
+                        .findFragmentByTag("f" + pos);
+                if (fragment != null) {
+                    fragment.markSeen();
+                }
             }
 
             @Override
@@ -294,8 +299,14 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
                 }
             }
             if (closed) {
-                runOnUiThread(() -> Toast.makeText(ComAssistantActivity.this,
-                        "USB 串口设备已拔出", Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> {
+                    Toast.makeText(ComAssistantActivity.this,
+                            "USB 串口设备已拔出", Toast.LENGTH_SHORT).show();
+                    PortFragment fragment = currentFragment();
+                    if (fragment != null) {
+                        fragment.refreshPortState();
+                    }
+                });
             }
         }
     };
@@ -451,7 +462,19 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
             runOnUiThread(() -> {
                 progress.dismiss();
                 if (fragment != null && done > 0) {
-                    fragment.logTx(Arrays.copyOfRange(data, 0, done));
+                    // 大文件只记录前 64 字节 + 摘要，避免单条日志过大导致卡顿/OOM
+                    int headLen = Math.min(done, 64);
+                    byte[] summary;
+                    if (done > headLen) {
+                        byte[] head = Arrays.copyOfRange(data, 0, headLen);
+                        byte[] tail = ("... [+ " + (done - headLen) + " bytes]").getBytes();
+                        summary = new byte[head.length + tail.length];
+                        System.arraycopy(head, 0, summary, 0, head.length);
+                        System.arraycopy(tail, 0, summary, head.length, tail.length);
+                    } else {
+                        summary = Arrays.copyOfRange(data, 0, headLen);
+                    }
+                    fragment.logTx(summary);
                 }
                 Toast.makeText(this, fileSendCancelled ? "发送已取消" : "发送完成",
                         Toast.LENGTH_SHORT).show();

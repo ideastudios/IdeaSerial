@@ -53,6 +53,7 @@ public class PortFragment extends Fragment {
 
     private static final String ARG_INDEX = "port_index";
     private static final int MAX_ENTRIES = 5000;
+    private static final int PENDING_DRAIN_THRESHOLD = 200;
     private static final long FLUSH_INTERVAL_MS = 120;
 
     private int portIndex;
@@ -181,10 +182,8 @@ public class PortFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        unread = 0;
-        if (getActivity() instanceof UnreadListener) {
-            ((UnreadListener) getActivity()).onUnreadChanged(portIndex, 0);
-        }
+        markSeen();
+        refreshPortState();
         startFlush();
     }
 
@@ -208,8 +207,24 @@ public class PortFragment extends Fragment {
     // 数据接收（读线程回调）
     //----------------------------------------------------
     private void onSerialData(ComBean bean) {
+        List<ComBean> drain = null;
         synchronized (pending) {
             pending.add(bean);
+            // 后台页（非当前 Tab）flush 暂停时防止无限积压，达到阈值直接排水入库
+            if (pending.size() >= PENDING_DRAIN_THRESHOLD) {
+                drain = new ArrayList<>(pending);
+                pending.clear();
+            }
+        }
+        if (drain != null) {
+            final List<ComBean> batch = drain;
+            uiHandler.post(() -> {
+                if (binding != null) {
+                    adapter.append(batch);
+                    adapter.trimTo(MAX_ENTRIES);
+                    updateCounters();
+                }
+            });
         }
         if (!isResumed()) {
             unread++;
@@ -282,6 +297,9 @@ public class PortFragment extends Fragment {
             }
             if (!info.hasPermission) {
                 activity.requestUsbPermission(info.device, granted -> {
+                    if (!isAdded()) {
+                        return; // 授权弹窗期间页面已销毁
+                    }
                     if (granted) {
                         doOpen();
                     } else {
@@ -628,6 +646,27 @@ public class PortFragment extends Fragment {
     //----------------------------------------------------
     public boolean isPortOpen() {
         return helper != null && helper.isOpen();
+    }
+
+    /** 页面重新可见 / Tab 切回时清零未读计数 */
+    public void markSeen() {
+        unread = 0;
+        if (getActivity() instanceof UnreadListener) {
+            ((UnreadListener) getActivity()).onUnreadChanged(portIndex, 0);
+        }
+    }
+
+    /** 外部事件（如 USB 拔出）导致端口被关闭后，同步按钮与自动发送开关状态 */
+    public void refreshPortState() {
+        if (binding == null) {
+            return;
+        }
+        boolean open = helper != null && helper.isOpen();
+        updateOpenState(open);
+        if (!open && binding.switchAuto.isChecked()) {
+            binding.switchAuto.setChecked(false);
+        }
+        updateCounters();
     }
 
     public String exportLogText() {

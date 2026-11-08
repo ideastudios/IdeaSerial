@@ -32,6 +32,8 @@ public abstract class SerialHelper {
     private int iDelay = 500;
     private final AtomicLong rxCount = new AtomicLong();
     private final AtomicLong txCount = new AtomicLong();
+    /** 写锁：自动发送线程、手动发送、文件发送可能并发写同一端口 */
+    private final Object writeLock = new Object();
 
     //----------------------------------------------------
     public SerialHelper(@NonNull Context context) {
@@ -49,7 +51,14 @@ public abstract class SerialHelper {
             return;
         }
         connection = createConnection(config);
-        connection.open();
+        try {
+            connection.open();
+        } catch (IOException | RuntimeException e) {
+            // 打开失败时清理半初始化的连接（如 USB 的 UsbDeviceConnection），避免泄漏
+            connection.close();
+            connection = null;
+            throw e;
+        }
         _isOpen = true;
         mReadThread = new ReadThread();
         mReadThread.start();
@@ -85,11 +94,13 @@ public abstract class SerialHelper {
         if (!_isOpen || connection == null || bOutArray == null || bOutArray.length == 0) {
             return;
         }
-        try {
-            connection.write(bOutArray);
-            txCount.addAndGet(bOutArray.length);
-        } catch (IOException e) {
-            e.printStackTrace();
+        synchronized (writeLock) {
+            try {
+                connection.write(bOutArray);
+                txCount.addAndGet(bOutArray.length);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
