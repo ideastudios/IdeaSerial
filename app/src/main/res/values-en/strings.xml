@@ -80,6 +80,16 @@
     <string name="save_ok">Saved</string>
     <string name="save_failed">Failed to save</string>
 
+    <!-- Update check -->
+    <string name="menu_check_update">Check for updates</string>
+    <string name="update_checking">Checking for updates…</string>
+    <string name="update_latest">Already on the latest version</string>
+    <string name="update_found_title">New version %1$s available</string>
+    <string name="update_found_message">Current version %1$s, new version %2$s available.\nTap “Download” to open the APK download link in your browser.</string>
+    <string name="update_download">Download</string>
+    <string name="update_check_failed">Failed to check for updates. Check your network and try again</string>
+    <string name="update_no_browser">No browser available</string>
+
     <!-- Option arrays -->
     <string-array name="parity_options">
         <item>None</item>

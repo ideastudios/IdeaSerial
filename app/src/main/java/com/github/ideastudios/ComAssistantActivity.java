@@ -42,6 +42,7 @@ import com.github.ideastudios.ui.FileSendConfigDialogFragment;
 import com.github.ideastudios.ui.FileSendDialogFragment;
 import com.github.ideastudios.ui.PortFragment;
 import com.github.ideastudios.ui.PortPagerAdapter;
+import com.github.ideastudios.util.UpdateChecker;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
@@ -85,6 +86,8 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
     /** 双击返回才退出应用：首次返回仅提示，2 秒内再按才退出，防止误触丢失日志 */
     private OnBackPressedCallback exitBackCallback;
     private long lastBackPressTime;
+    /** 更新检查进行中标记：防止重复点击发起多个请求 */
+    private boolean updateChecking;
 
     /** USB 权限请求结果回调 */
     public interface UsbPermissionCallback {
@@ -370,7 +373,7 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
     };
 
     //----------------------------------------------------
-    // 菜单：全屏模式 / 发送文件 / 保存日志 / 清空日志
+    // 菜单：全屏模式 / 发送文件 / 保存日志 / 清空日志 / 检查更新
     //----------------------------------------------------
     @Override
     public boolean onCreateOptionsMenu(@NonNull android.view.Menu menu) {
@@ -401,8 +404,70 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
                 fragment.clearLog();
             }
             return true;
+        } else if (id == R.id.action_check_update) {
+            checkForUpdate();
+            return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    //----------------------------------------------------
+    // 检查更新：后台拉取 feed 分支 latest.json，新版本弹窗由浏览器下载
+    //----------------------------------------------------
+    private void checkForUpdate() {
+        if (updateChecking) {
+            return;
+        }
+        updateChecking = true;
+        Toast.makeText(this, getString(R.string.update_checking), Toast.LENGTH_SHORT).show();
+        UpdateChecker.check(this, new UpdateChecker.Listener() {
+            @Override
+            public void onNewVersion(@NonNull UpdateChecker.ReleaseInfo release) {
+                updateChecking = false;
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
+                String current = UpdateChecker.currentVersion(ComAssistantActivity.this);
+                new MaterialAlertDialogBuilder(ComAssistantActivity.this)
+                        .setTitle(getString(R.string.update_found_title, release.version))
+                        .setMessage(getString(R.string.update_found_message,
+                                current, release.version))
+                        .setPositiveButton(R.string.update_download,
+                                (dialog, which) -> openDownloadPage(release.url))
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+            }
+
+            @Override
+            public void onUpToDate() {
+                updateChecking = false;
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
+                Toast.makeText(ComAssistantActivity.this,
+                        getString(R.string.update_latest), Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onError(@NonNull String message) {
+                updateChecking = false;
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
+                Toast.makeText(ComAssistantActivity.this,
+                        getString(R.string.update_check_failed), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    /** 用系统浏览器打开 APK 下载直链（安装交由用户手动完成） */
+    private void openDownloadPage(@NonNull String url) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+        } catch (Exception e) {
+            Toast.makeText(this, getString(R.string.update_no_browser),
+                    Toast.LENGTH_SHORT).show();
+        }
     }
 
     //----------------------------------------------------
