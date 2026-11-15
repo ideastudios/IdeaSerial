@@ -16,5 +16,7 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
+        <!-- 横屏时窗口延伸到摄像头挖孔区（默认模式会被系统信箱化留黑边），内容避让由 insets 负责 -->
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 </resources>
