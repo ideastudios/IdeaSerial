@@ -15,6 +15,12 @@
     <string name="menu_send_file">发送文件</string>
     <string name="menu_save_log">保存日志</string>
     <string name="menu_clear_log">清空日志</string>
+    <string name="menu_fullscreen">全屏模式</string>
+    <string name="menu_exit_fullscreen">退出全屏</string>
+    <string name="exit_confirm_hint">再按一次退出程序</string>
+    <string name="clear_screen">清屏</string>
+    <string name="focus_mode">专注</string>
+    <string name="focus_mode_exit">退出专注</string>
 
     <!-- 串口设置对话框 -->
     <string name="dialog_port_settings">串口设置</string>
@@ -66,6 +72,8 @@
     <string name="file_chunk_hint">每包字节数</string>
     <string name="file_interval_hint">包间隔 (ms)</string>
     <string name="file_send_start">开始发送</string>
+    <string name="file_send_busy">已有发送任务进行中</string>
+    <string name="summary_tail">… [+ %1$d bytes]</string>
     <string name="progress_format">%1$d / %2$d</string>
     <string name="send_cancelled">发送已取消</string>
     <string name="send_done">发送完成</string>

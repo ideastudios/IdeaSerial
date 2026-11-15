@@ -15,6 +15,12 @@
     <string name="menu_send_file">Send File</string>
     <string name="menu_save_log">Save Log</string>
     <string name="menu_clear_log">Clear Log</string>
+    <string name="menu_fullscreen">Fullscreen mode</string>
+    <string name="menu_exit_fullscreen">Exit fullscreen</string>
+    <string name="exit_confirm_hint">Press back again to exit</string>
+    <string name="clear_screen">Clear</string>
+    <string name="focus_mode">Focus</string>
+    <string name="focus_mode_exit">Exit Focus</string>
 
     <!-- Port settings dialog -->
     <string name="dialog_port_settings">Serial Port Settings</string>
@@ -66,6 +72,8 @@
     <string name="file_chunk_hint">Bytes per chunk</string>
     <string name="file_interval_hint">Interval (ms)</string>
     <string name="file_send_start">Start sending</string>
+    <string name="file_send_busy">A send task is already running</string>
+    <string name="summary_tail">… [+ %1$d bytes]</string>
     <string name="progress_format">%1$d / %2$d</string>
     <string name="send_cancelled">Sending cancelled</string>
     <string name="send_done">Send complete</string>
