@@ -42,10 +42,25 @@ jobs:
             "https://mirrors.cloud.tencent.com/gradle/$DIST.zip" || true
           ls -la "$DIR"
 
-      - name: Build debug APK
+      - name: Restore signing keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "${ANDROID_KEYSTORE_BASE64:-}" ]; then
+            echo "::error::Signing secrets not set (ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_PASSWORD)"
+            exit 1
+          fi
+          echo "${ANDROID_KEYSTORE_BASE64}" | base64 -d > "${GITHUB_WORKSPACE}/ideasetrial-release.jks"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=ideasetrial\nkeyPassword=%s\n' \
+            "${GITHUB_WORKSPACE}/ideasetrial-release.jks" \
+            "${ANDROID_KEYSTORE_PASSWORD}" "${ANDROID_KEY_PASSWORD}" > keystore.properties
+
+      - name: Build release APK
         run: |
           for i in 1 2 3; do
-            ./gradlew assembleDebug && exit 0
+            ./gradlew assembleRelease && exit 0
             echo "Attempt $i failed, retrying in 30s..."
             sleep 30
           done
@@ -54,7 +69,7 @@ jobs:
       - name: Rename APK & compute SHA256
         run: |
           VERSION="${GITHUB_REF_NAME}"
-          cp app/build/outputs/apk/debug/app-debug.apk "IdeaSerial-${VERSION}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "IdeaSerial-${VERSION}.apk"
           sha256sum "IdeaSerial-${VERSION}.apk" > "IdeaSerial-${VERSION}.apk.sha256"
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
 
