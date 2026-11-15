@@ -2,6 +2,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_fullscreen"
+        android:title="@string/menu_fullscreen"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_send_file"
         android:title="@string/menu_send_file"
         app:showAsAction="never" />

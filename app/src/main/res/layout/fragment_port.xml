@@ -6,8 +6,9 @@
     android:orientation="vertical"
     android:padding="10dp">
 
-    <!-- 状态行：打开/关闭、端口信息、字节计数 -->
+    <!-- 状态行：打开/关闭、端口信息、端口配置 -->
     <LinearLayout
+        android:id="@+id/rowStatus"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
@@ -32,15 +33,6 @@
             android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="12sp" />
 
-        <TextView
-            android:id="@+id/textCounter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:fontFamily="monospace"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="12sp" />
-
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonConfig"
             style="?attr/materialButtonOutlinedStyle"
@@ -53,6 +45,7 @@
 
     <!-- 快捷命令条 -->
     <HorizontalScrollView
+        android:id="@+id/scrollCommands"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
@@ -68,7 +61,7 @@
             app:singleLine="true" />
     </HorizontalScrollView>
 
-    <!-- 接收日志（卡片化） -->
+    <!-- 接收日志（卡片化：头部 = RX/TX 计数 + 专注 + 清屏按钮） -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -79,16 +72,72 @@
         app:strokeColor="?attr/colorOutlineVariant"
         app:strokeWidth="1dp">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerLog"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:padding="4dp" />
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="10dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="2dp">
+
+                <TextView
+                    android:id="@+id/textCounter"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="monospace"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonFocus"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minWidth="0dp"
+                    android:text="@string/focus_mode"
+                    android:textSize="13sp"
+                    app:icon="@drawable/ic_fullscreen"
+                    app:iconGravity="textStart"
+                    app:iconTint="?attr/colorPrimary" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonClearLog"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minWidth="0dp"
+                    android:text="@string/clear_screen"
+                    android:textSize="13sp"
+                    app:icon="@drawable/ic_clear_log"
+                    app:iconGravity="textStart"
+                    app:iconTint="?attr/colorPrimary" />
+            </LinearLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerLog"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:padding="4dp" />
+        </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
     <!-- 发送行 -->
     <LinearLayout
+        android:id="@+id/rowSend"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
@@ -127,6 +176,7 @@
 
     <!-- 自动发送行 -->
     <LinearLayout
+        android:id="@+id/rowAutoSend"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
