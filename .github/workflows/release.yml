@@ -73,6 +73,15 @@ jobs:
           sha256sum "IdeaSerial-${VERSION}.apk" > "IdeaSerial-${VERSION}.apk.sha256"
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
 
+      - name: Verify APK is signed with the stable release key
+        run: |
+          APKSIGNER=$(ls "${ANDROID_HOME}"/build-tools/*/apksigner | sort -V | tail -1)
+          FINGERPRINT=$("$APKSIGNER" verify --print-certs "IdeaSerial-${GITHUB_REF_NAME}.apk" \
+            | grep "SHA-256 digest" | head -1)
+          echo "APK cert: ${FINGERPRINT}"
+          echo "${FINGERPRINT}" | grep -q "51389cce262c88fb6b73ff1a2ebcef01adaf3e0bd52eac062d899eabba80328a" \
+            || { echo "::error::APK is not signed with the stable release key (expected 51389cce...328a)"; exit 1; }
+
       - name: Update feed branch (latest.json)
         run: |
           SHA256=$(cut -d' ' -f1 "IdeaSerial-${VERSION}.apk.sha256")
