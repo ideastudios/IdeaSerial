@@ -32,6 +32,8 @@ import com.github.ideastudios.bean.QuickCommand;
 import com.github.ideastudios.databinding.DialogPortConfigBinding;
 import com.github.ideastudios.databinding.FragmentPortBinding;
 import com.github.ideastudios.serial.SerialConfig;
+import com.github.ideastudios.serial.SerialControl;
+import com.github.ideastudios.serial.SerialSession;
 import com.github.ideastudios.serialport.UsbSerialConnection;
 import com.github.ideastudios.util.MyFunc;
 import com.google.android.material.chip.Chip;
@@ -53,7 +55,9 @@ public class PortFragment extends Fragment {
     }
 
     private static final String ARG_INDEX = "port_index";
-    private static final int MAX_ENTRIES = 5000;
+    private static final String STATE_SEND_TEXT = "send_text";
+    private static final String STATE_FOCUS_MODE = "focus_mode";
+    private static final int MAX_ENTRIES = SerialSession.LOG_LIMIT;
     private static final int PENDING_DRAIN_THRESHOLD = 200;
     private static final long FLUSH_INTERVAL_MS = 120;
 
@@ -61,12 +65,16 @@ public class PortFragment extends Fragment {
     private FragmentPortBinding binding;
     private LogAdapter adapter;
     private AppSettings settings;
-    private ComAssistantActivity.SerialControl helper;
+    private SerialControl helper;
+    /** 会话层单例：日志/未读跨转屏保留 */
+    private SerialSession session;
     private final List<ComBean> pending = new ArrayList<>();
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private Runnable flushRunnable;
-    private int unread;
     private boolean autoScroll = true;
+    private boolean focusMode;
+    /** UI 数据监听者（同一实例，attach/detach 需做身份比对） */
+    private final SerialSession.OnDataListener uiListener = this::onSerialData;
 
     public static PortFragment newInstance(int index) {
         PortFragment fragment = new PortFragment();
@@ -95,8 +103,8 @@ public class PortFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         ComAssistantActivity activity = (ComAssistantActivity) requireActivity();
         settings = activity.getSettings();
+        session = SerialSession.get(requireContext().getApplicationContext());
         helper = activity.getSerialControl(portIndex);
-        helper.setListener(this::onSerialData);
 
         // 日志列表
         adapter = new LogAdapter(this::showEntryMenu);
@@ -116,6 +124,13 @@ public class PortFragment extends Fragment {
                 }
             }
         });
+
+        // 挂接会话层：原子注册监听 + 恢复历史日志（转屏重建不丢数据）
+        List<ComBean> history = session.attachUi(portIndex, uiListener);
+        adapter.append(history);
+        if (!history.isEmpty() && autoScroll) {
+            binding.recyclerLog.scrollToPosition(history.size() - 1);
+        }
 
         // 状态行
         binding.buttonOpen.setOnClickListener(v -> togglePort());
@@ -137,6 +152,12 @@ public class PortFragment extends Fragment {
 
         // 发送
         binding.buttonSend.setOnClickListener(v -> sendCurrent());
+
+        // 清屏：只清当前 Tab 的日志
+        binding.buttonClearLog.setOnClickListener(v -> clearLog());
+
+        // 专注模式：整屏只保留日志，便于阅读；各 Tab 独立
+        binding.buttonFocus.setOnClickListener(v -> setFocusMode(!focusMode));
 
         // 自动发送
         binding.editTextInterval.setText(
@@ -178,6 +199,12 @@ public class PortFragment extends Fragment {
         });
 
         buildChips();
+
+        // 恢复转屏前的瞬态：发送框内容、专注模式
+        if (savedInstanceState != null) {
+            binding.editTextSend.setText(savedInstanceState.getString(STATE_SEND_TEXT, ""));
+            setFocusMode(savedInstanceState.getBoolean(STATE_FOCUS_MODE, false));
+        }
     }
 
     @Override
@@ -195,17 +222,27 @@ public class PortFragment extends Fragment {
     }
 
     @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (binding != null) {
+            outState.putString(STATE_SEND_TEXT, binding.editTextSend.getText().toString());
+        }
+        outState.putBoolean(STATE_FOCUS_MODE, focusMode);
+    }
+
+    @Override
     public void onDestroyView() {
         stopFlush();
-        if (helper != null) {
-            helper.setListener(null);
+        // 身份比对式注销：转屏时旧页面销毁晚于新页面挂接，不能误清新页面的监听
+        if (session != null) {
+            session.detachUi(portIndex, uiListener);
         }
         binding = null;
         super.onDestroyView();
     }
 
     //----------------------------------------------------
-    // 数据接收（读线程回调）
+    // 数据接收（读线程回调：bean 已由会话层写入日志）
     //----------------------------------------------------
     private void onSerialData(ComBean bean) {
         List<ComBean> drain = null;
@@ -228,10 +265,11 @@ public class PortFragment extends Fragment {
             });
         }
         if (!isResumed()) {
-            unread++;
+            session.bumpUnread(portIndex);
             uiHandler.post(() -> {
                 if (getActivity() instanceof UnreadListener) {
-                    ((UnreadListener) getActivity()).onUnreadChanged(portIndex, unread);
+                    ((UnreadListener) getActivity()).onUnreadChanged(
+                            portIndex, session.getUnread(portIndex));
                 }
             });
         }
@@ -396,9 +434,9 @@ public class PortFragment extends Fragment {
         logTx(data);
     }
 
-    /** 发送完成后补一条 TX 日志 */
+    /** 发送完成后补一条 TX 日志（走会话层：转屏后由新页面渲染） */
     public void logTx(byte[] data) {
-        onSerialData(new ComBean(settings.ports[portIndex].devicePath, data, data.length,
+        session.log(portIndex, new ComBean(settings.ports[portIndex].devicePath, data, data.length,
                 ComBean.DIR_TX, System.currentTimeMillis()));
     }
 
@@ -610,6 +648,7 @@ public class PortFragment extends Fragment {
                     config.flowControl = d.spinnerFlow.getSelectedItemPosition();
                     activity.saveSettings();
                     updatePortInfo();
+                    activity.updateTabDeviceInfo(portIndex);
                     if (wasOpen) {
                         toast(getString(R.string.config_saved));
                     }
@@ -658,7 +697,7 @@ public class PortFragment extends Fragment {
 
     /** 页面重新可见 / Tab 切回时清零未读计数 */
     public void markSeen() {
-        unread = 0;
+        session.markSeen(portIndex);
         if (getActivity() instanceof UnreadListener) {
             ((UnreadListener) getActivity()).onUnreadChanged(portIndex, 0);
         }
@@ -674,6 +713,10 @@ public class PortFragment extends Fragment {
         if (!open && binding.switchAuto.isChecked()) {
             binding.switchAuto.setChecked(false);
         }
+        // UI 重建后同步自动发送开关的真实状态（会话层持有发送循环）
+        if (helper != null && helper.isAutoSending() != binding.switchAuto.isChecked()) {
+            binding.switchAuto.setChecked(helper.isAutoSending());
+        }
         updateCounters();
     }
 
@@ -682,7 +725,29 @@ public class PortFragment extends Fragment {
     }
 
     public void clearLog() {
+        // 连同读线程尚未上屏的缓存与会话层日志一起清掉，避免清屏后旧数据又冒出来
+        synchronized (pending) {
+            pending.clear();
+        }
+        session.clearLogs(portIndex);
         adapter.clear();
+    }
+
+    /** 专注模式：隐藏状态/命令/发送区，日志占满整屏；仅切换可见性，收发不受影响 */
+    private void setFocusMode(boolean enabled) {
+        focusMode = enabled;
+        int gone = enabled ? View.GONE : View.VISIBLE;
+        binding.rowStatus.setVisibility(gone);
+        binding.scrollCommands.setVisibility(gone);
+        binding.rowSend.setVisibility(gone);
+        binding.rowAutoSend.setVisibility(gone);
+        // 横屏双栏布局独有：隐藏整个右侧面板，日志占满全宽（竖屏布局中为 null）
+        if (binding.sidePanel != null) {
+            binding.sidePanel.setVisibility(gone);
+        }
+        binding.buttonFocus.setText(enabled ? R.string.focus_mode_exit : R.string.focus_mode);
+        binding.buttonFocus.setIconResource(
+                enabled ? R.drawable.ic_fullscreen_exit : R.drawable.ic_fullscreen);
     }
 
     private void toast(String msg) {

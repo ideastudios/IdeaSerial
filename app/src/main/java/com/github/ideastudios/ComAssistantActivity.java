@@ -12,13 +12,12 @@ import android.hardware.usb.UsbManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
-import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -28,15 +27,19 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.github.ideastudios.bean.AppSettings;
-import com.github.ideastudios.bean.ComBean;
 import com.github.ideastudios.databinding.ActivityMainBinding;
+import com.github.ideastudios.serial.FileSendTask;
 import com.github.ideastudios.serial.SerialConfig;
-import com.github.ideastudios.serial.SerialHelper;
+import com.github.ideastudios.serial.SerialControl;
+import com.github.ideastudios.serial.SerialSession;
 import com.github.ideastudios.serialport.SerialPortFinder;
 import com.github.ideastudios.serialport.UsbSerialConnection;
 import com.github.ideastudios.store.SettingsStore;
+import com.github.ideastudios.ui.FileSendConfigDialogFragment;
+import com.github.ideastudios.ui.FileSendDialogFragment;
 import com.github.ideastudios.ui.PortFragment;
 import com.github.ideastudios.ui.PortPagerAdapter;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -67,45 +70,25 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
     private AppSettings settings;
     private SettingsStore store;
     private SerialPortFinder finder;
-    private final SerialControl[] controls = new SerialControl[PortPagerAdapter.PORT_COUNT];
-    private final int[] unreadCounts = new int[PortPagerAdapter.PORT_COUNT];
+    /** 会话层单例：串口连接/日志/未读计数跨转屏保留，UI 只负责渲染 */
+    private SerialSession session;
     private final TextView[] tabTitles = new TextView[PortPagerAdapter.PORT_COUNT];
     private final TextView[] tabBadges = new TextView[PortPagerAdapter.PORT_COUNT];
+    private final TextView[] tabDevices = new TextView[PortPagerAdapter.PORT_COUNT];
 
     private ActivityResultLauncher<String> filePicker;
     private ActivityResultLauncher<String> logSaver;
-    private volatile boolean fileSendCancelled;
     private String pendingLogText;
+    /** 应用级全屏开关：隐藏系统状态栏/导航栏（边缘滑动临时唤出），由菜单切换 */
+    private boolean fullscreenMode;
+    private MenuItem fullscreenMenuItem;
+    /** 双击返回才退出应用：首次返回仅提示，2 秒内再按才退出，防止误触丢失日志 */
+    private OnBackPressedCallback exitBackCallback;
+    private long lastBackPressTime;
 
     /** USB 权限请求结果回调 */
     public interface UsbPermissionCallback {
         void onResult(boolean granted);
-    }
-
-    /** 带监听的串口控制类：读线程数据转发给当前绑定的 Fragment */
-    public static class SerialControl extends SerialHelper {
-
-        /** 串口数据监听 */
-        public interface OnDataListener {
-            void onSerialData(ComBean bean);
-        }
-
-        private OnDataListener listener;
-
-        public SerialControl(Context context) {
-            super(context);
-        }
-
-        public void setListener(@Nullable OnDataListener listener) {
-            this.listener = listener;
-        }
-
-        @Override
-        protected void onDataReceived(ComBean bean) {
-            if (listener != null) {
-                listener.onSerialData(bean);
-            }
-        }
     }
 
     @Override
@@ -114,9 +97,7 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
         store = new SettingsStore(this);
         settings = store.load();
         finder = new SerialPortFinder();
-        for (int i = 0; i < controls.length; i++) {
-            controls[i] = new SerialControl(this);
-        }
+        session = SerialSession.get(getApplicationContext());
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -136,7 +117,9 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
         });
         ViewCompat.setOnApplyWindowInsetsListener(binding.toolbar, (v, windowInsets) -> {
             Insets bars = windowInsets.getInsets(barTypes);
-            v.setPadding(v.getPaddingLeft(), bars.top, v.getPaddingRight(), v.getPaddingBottom());
+            // 全屏模式：顶部贴边，标题延伸进挖孔区（横屏左右侧的挖孔避让由根布局负责）
+            int top = fullscreenMode ? 0 : bars.top;
+            v.setPadding(v.getPaddingLeft(), top, v.getPaddingRight(), v.getPaddingBottom());
             return windowInsets;
         });
 
@@ -162,23 +145,27 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
                             binding.tabLayout, false);
                     TextView title = custom.findViewById(R.id.textTabTitle);
                     TextView badge = custom.findViewById(R.id.textTabBadge);
+                    TextView device = custom.findViewById(R.id.textTabDevice);
                     title.setText(portLabel(position));
                     tabTitles[position] = title;
                     tabBadges[position] = badge;
+                    tabDevices[position] = device;
                     tab.setCustomView(custom);
                     updateTabBadge(position);
+                    updateTabDeviceInfo(position);
                 }).attach();
         binding.tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(@NonNull TabLayout.Tab tab) {
                 int pos = tab.getPosition();
-                unreadCounts[pos] = 0;
-                updateTabBadge(pos);
                 PortFragment fragment = (PortFragment) getSupportFragmentManager()
                         .findFragmentByTag("f" + pos);
                 if (fragment != null) {
                     fragment.markSeen();
+                } else {
+                    session.markSeen(pos);
                 }
+                updateTabBadge(pos);
             }
 
             @Override
@@ -191,10 +178,58 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
         });
 
         registerUsbReceivers();
+
+        if (savedInstanceState != null) {
+            fullscreenMode = savedInstanceState.getBoolean("fullscreen", false);
+        }
+
+        // 双击返回才退出应用：单次返回只提示，避免误触退出丢日志
+        exitBackCallback = new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                long now = System.currentTimeMillis();
+                if (now - lastBackPressTime < 2000) {
+                    finish();
+                } else {
+                    lastBackPressTime = now;
+                    Toast.makeText(ComAssistantActivity.this,
+                            getString(R.string.exit_confirm_hint), Toast.LENGTH_SHORT).show();
+                }
+            }
+        };
+        getOnBackPressedDispatcher().addCallback(this, exitBackCallback);
     }
 
     private String portLabel(int position) {
         return "COM " + (char) ('A' + position);
+    }
+
+    /** Tab 上的设备短名：USB 用设备名，板载取路径末段（如 ttyS1） */
+    private String deviceShortName(int position) {
+        SerialConfig c = settings.ports[position];
+        if (c.driverType == SerialConfig.DRIVER_USB) {
+            return c.usbDeviceName != null && !c.usbDeviceName.isEmpty()
+                    ? c.usbDeviceName : c.devicePath;
+        }
+        String path = c.devicePath == null ? "" : c.devicePath;
+        int idx = path.lastIndexOf('/');
+        return idx >= 0 ? path.substring(idx + 1) : path;
+    }
+
+    /** 更新 Tab 第二行显示的绑定设备名（配置变更时由 PortFragment 调用） */
+    public void updateTabDeviceInfo(int position) {
+        TextView device = position >= 0 && position < tabDevices.length
+                ? tabDevices[position] : null;
+        if (device == null) {
+            return;
+        }
+        String name = deviceShortName(position);
+        if (name == null || name.isEmpty()) {
+            device.setVisibility(View.GONE);
+        } else {
+            device.setVisibility(View.VISIBLE);
+            device.setText(name);
+        }
     }
 
     //----------------------------------------------------
@@ -202,10 +237,9 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
     //----------------------------------------------------
     @Override
     public void onUnreadChanged(int portIndex, int count) {
-        if (portIndex < 0 || portIndex >= unreadCounts.length) {
+        if (portIndex < 0 || portIndex >= PortPagerAdapter.PORT_COUNT) {
             return;
         }
-        unreadCounts[portIndex] = count;
         updateTabBadge(portIndex);
     }
 
@@ -214,7 +248,7 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
         if (badge == null) {
             return;
         }
-        int count = unreadCounts[position];
+        int count = session.getUnread(position);
         if (count > 0) {
             badge.setText(String.valueOf(count));
             badge.setVisibility(View.VISIBLE);
@@ -231,7 +265,7 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
     }
 
     public SerialControl getSerialControl(int index) {
-        return controls[index];
+        return session.getControl(index);
     }
 
     public void saveSettings() {
@@ -312,7 +346,8 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
                 return;
             }
             boolean closed = false;
-            for (SerialControl control : controls) {
+            for (int i = 0; i < PortPagerAdapter.PORT_COUNT; i++) {
+                SerialControl control = session.getControl(i);
                 SerialConfig config = control.getConfig();
                 if (control.isOpen() && config.driverType == SerialConfig.DRIVER_USB
                         && config.usbVid == device.getVendorId()
@@ -335,11 +370,13 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
     };
 
     //----------------------------------------------------
-    // 菜单：发送文件 / 保存日志 / 清空日志
+    // 菜单：全屏模式 / 发送文件 / 保存日志 / 清空日志
     //----------------------------------------------------
     @Override
     public boolean onCreateOptionsMenu(@NonNull android.view.Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
+        fullscreenMenuItem = menu.findItem(R.id.action_fullscreen);
+        updateFullscreenItemTitle();
         return true;
     }
 
@@ -347,7 +384,12 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
     @Override
     public boolean onOptionsItemSelected(@NonNull android.view.MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.action_send_file) {
+        if (id == R.id.action_fullscreen) {
+            fullscreenMode = !fullscreenMode;
+            updateFullscreenItemTitle();
+            applyFullscreen();
+            return true;
+        } else if (id == R.id.action_send_file) {
             filePicker.launch("*/*");
             return true;
         } else if (id == R.id.action_save_log) {
@@ -363,6 +405,41 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
         return super.onOptionsItemSelected(item);
     }
 
+    //----------------------------------------------------
+    // 应用级全屏：隐藏系统栏（上/下边缘滑动临时唤出，松手自动隐藏），菜单切换
+    //----------------------------------------------------
+    private void applyFullscreen() {
+        WindowInsetsControllerCompat controller =
+                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        if (fullscreenMode) {
+            controller.setSystemBarsBehavior(
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            controller.hide(WindowInsetsCompat.Type.systemBars());
+        } else {
+            controller.show(WindowInsetsCompat.Type.systemBars());
+        }
+    }
+
+    private void updateFullscreenItemTitle() {
+        if (fullscreenMenuItem != null) {
+            fullscreenMenuItem.setTitle(fullscreenMode
+                    ? R.string.menu_exit_fullscreen : R.string.menu_fullscreen);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // 回到前台/重建后按全局开关恢复系统栏状态
+        applyFullscreen();
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean("fullscreen", fullscreenMode);
+    }
+
     @Nullable
     private PortFragment currentFragment() {
         int position = binding.viewPager.getCurrentItem();
@@ -371,7 +448,7 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
 
     @Nullable
     private SerialControl currentControl() {
-        return controls[binding.viewPager.getCurrentItem()];
+        return session.getControl(binding.viewPager.getCurrentItem());
     }
 
     //----------------------------------------------------
@@ -406,106 +483,31 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
             Toast.makeText(this, getString(R.string.file_empty), Toast.LENGTH_SHORT).show();
             return;
         }
-        showFileSendDialog(data);
+        // 文件数据存静态暂存位（MB 级不能进 Bundle），由参数对话框消费
+        FileSendConfigDialogFragment.setPendingData(data);
+        FileSendConfigDialogFragment dialog = new FileSendConfigDialogFragment();
+        Bundle args = new Bundle();
+        args.putInt(FileSendConfigDialogFragment.ARG_CHUNK, settings.fileSendChunkSize);
+        args.putInt(FileSendConfigDialogFragment.ARG_INTERVAL, settings.fileSendIntervalMs);
+        dialog.setArguments(args);
+        dialog.show(getSupportFragmentManager(), "file_send_config");
     }
 
-    private void showFileSendDialog(byte[] data) {
-        int pad = (int) (16 * getResources().getDisplayMetrics().density);
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(pad, pad / 2, pad, 0);
-        final EditText etChunk = new EditText(this);
-        etChunk.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        etChunk.setHint(getString(R.string.file_chunk_hint));
-        etChunk.setText(String.valueOf(settings.fileSendChunkSize));
-        final EditText etInterval = new EditText(this);
-        etInterval.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        etInterval.setHint(getString(R.string.file_interval_hint));
-        etInterval.setText(String.valueOf(settings.fileSendIntervalMs));
-        box.addView(etChunk);
-        box.addView(etInterval);
-
-        new MaterialAlertDialogBuilder(this)
-                .setTitle(getString(R.string.file_send_title, data.length))
-                .setView(box)
-                .setPositiveButton(getString(R.string.file_send_start), (dialog, which) -> {
-                    int chunk = settings.fileSendChunkSize;
-                    int interval = settings.fileSendIntervalMs;
-                    try {
-                        chunk = Integer.parseInt(etChunk.getText().toString());
-                    } catch (Exception ignored) {
-                    }
-                    try {
-                        interval = Integer.parseInt(etInterval.getText().toString());
-                    } catch (Exception ignored) {
-                    }
-                    chunk = Math.max(1, Math.min(chunk, 4096));
-                    interval = Math.max(0, Math.min(interval, 10_000));
-                    settings.fileSendChunkSize = chunk;
-                    settings.fileSendIntervalMs = interval;
-                    saveSettings();
-                    startFileSend(data, chunk, interval);
-                })
-                .setNegativeButton(getString(R.string.dialog_cancel), null)
-                .show();
-    }
-
-    private void startFileSend(byte[] data, int chunk, int interval) {
-        final SerialControl control = currentControl();
+    /** 由 FileSendConfigDialogFragment 在参数确认后调用 */
+    public void startFileSend(byte[] data, int chunk, int interval) {
+        SerialControl control = currentControl();
         if (control == null || !control.isOpen()) {
             Toast.makeText(this, R.string.port_not_open, Toast.LENGTH_SHORT).show();
             return;
         }
-        final PortFragment fragment = currentFragment();
-        fileSendCancelled = false;
-        androidx.appcompat.app.AlertDialog progress = new MaterialAlertDialogBuilder(this)
-                .setTitle(getString(R.string.menu_send_file))
-                .setMessage(getString(R.string.progress_format, 0, data.length))
-                .setCancelable(false)
-                .setNegativeButton(getString(R.string.dialog_cancel),
-                        (dialog, which) -> fileSendCancelled = true)
-                .create();
-        progress.show();
-        new Thread(() -> {
-            int sent = 0;
-            try {
-                while (sent < data.length && !fileSendCancelled) {
-                    int end = Math.min(sent + chunk, data.length);
-                    control.send(Arrays.copyOfRange(data, sent, end));
-                    sent = end;
-                    if (interval > 0) {
-                        Thread.sleep(interval);
-                    }
-                    int finalSent = sent;
-                    runOnUiThread(() -> progress.setMessage(
-                            getString(R.string.progress_format, finalSent, data.length)));
-                }
-            } catch (InterruptedException e) {
-                fileSendCancelled = true;
-            }
-            final int done = sent;
-            runOnUiThread(() -> {
-                progress.dismiss();
-                if (fragment != null && done > 0) {
-                    // 大文件只记录前 64 字节 + 摘要，避免单条日志过大导致卡顿/OOM
-                    int headLen = Math.min(done, 64);
-                    byte[] summary;
-                    if (done > headLen) {
-                        byte[] head = Arrays.copyOfRange(data, 0, headLen);
-                        byte[] tail = ("... [+ " + (done - headLen) + " bytes]").getBytes();
-                        summary = new byte[head.length + tail.length];
-                        System.arraycopy(head, 0, summary, 0, head.length);
-                        System.arraycopy(tail, 0, summary, head.length, tail.length);
-                    } else {
-                        summary = Arrays.copyOfRange(data, 0, headLen);
-                    }
-                    fragment.logTx(summary);
-                }
-                Toast.makeText(this,
-                        getString(fileSendCancelled ? R.string.send_cancelled : R.string.send_done),
-                        Toast.LENGTH_SHORT).show();
-            });
-        }, "file-send").start();
+        // 发送任务独立于 Activity 生命周期：转屏时发送继续、进度对话框自动恢复
+        FileSendTask task = FileSendTask.start(this, control,
+                binding.viewPager.getCurrentItem(), data, chunk, interval);
+        if (task == null) {
+            Toast.makeText(this, getString(R.string.file_send_busy), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        new FileSendDialogFragment().show(getSupportFragmentManager(), "file_send");
     }
 
     //----------------------------------------------------
@@ -553,8 +555,13 @@ public class ComAssistantActivity extends AppCompatActivity implements PortFragm
 
     @Override
     protected void onDestroy() {
-        for (SerialControl control : controls) {
-            control.close();
+        // 转屏重建（isFinishing=false）时保持串口连接，由会话层持有；
+        // 真正退出应用（isFinishing=true）时关闭并释放端口，避免后台进程占用设备
+        if (isFinishing()) {
+            FileSendConfigDialogFragment.clearPendingData();
+            for (int i = 0; i < PortPagerAdapter.PORT_COUNT; i++) {
+                session.getControl(i).close();
+            }
         }
         saveSettings();
         try {
