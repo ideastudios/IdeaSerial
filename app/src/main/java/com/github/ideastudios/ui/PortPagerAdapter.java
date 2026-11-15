@@ -5,12 +5,14 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 
+import com.github.ideastudios.serial.SerialSession;
+
 /**
- * 4 个串口页（COM A/B/C/D）
+ * 串口页适配器：页数与会话层端口数一致
  */
 public class PortPagerAdapter extends FragmentStateAdapter {
 
-    public static final int PORT_COUNT = 4;
+    public static final int PORT_COUNT = SerialSession.PORT_COUNT;
 
     public PortPagerAdapter(@NonNull FragmentActivity fragmentActivity) {
         super(fragmentActivity);

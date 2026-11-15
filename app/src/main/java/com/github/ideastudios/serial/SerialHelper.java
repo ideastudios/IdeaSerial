@@ -181,6 +181,11 @@ public abstract class SerialHelper {
             this.suspendFlag = false;
             notify();
         }
+
+        //循环是否处于发送状态
+        public boolean isLoopActive() {
+            return !suspendFlag;
+        }
     }
 
     //----------------------------------------------------
@@ -253,6 +258,12 @@ public abstract class SerialHelper {
         if (mSendThread != null) {
             mSendThread.setSuspendFlag();
         }
+    }
+
+    /** 自动发送循环是否处于运行状态（UI 重建后恢复开关状态用） */
+    public boolean isAutoSending() {
+        SendThread t = mSendThread;
+        return t != null && t.isLoopActive();
     }
 
     //----------------------------------------------------
